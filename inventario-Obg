@@ -1,0 +1,9 @@
+[redhat]
+rockyServer.obligatorio.com.uy ansible_host=172.17.0.101
+
+[debian]
+ubuntuServer.obligatorio.com.uy ansible_host=172.17.0.102
+
+[linux:children]
+redhat
+debian
