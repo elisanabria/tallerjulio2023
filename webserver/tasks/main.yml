@@ -1,2 +1,66 @@
 ---
-# tasks file for webserver
+# Archivo de Tareas de Despliegue de Servidor web
+
+- hosts: redhat
+  ansible_user: ansible
+  become: true
+  tasks:
+    - name: Instalacion de Podman
+      apt:
+        name: podman
+        state: present
+
+    - name: Instalacion Servidor Web Apache
+      yum:
+        name: httpd
+        state: present
+
+    - name: Iniciar y habilitar Servicio Apache
+      service:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Creacion de Directorio de VirtualHosts
+      file:
+        path: /etc/httpd/vhosts.d
+        state: directory
+        owner: root
+
+    - name: Creacion de Directorio de Webapp
+      file:
+	path: /opt/tomcat/webapps
+        state: directory
+        owner: root
+
+    - name: Copia de Archivo de Configuracion de Proxy Reverso
+      copy:
+        src: ./files/apache_config.conf
+        dest: /etc/httpd/vhosts.d/apache_config.conf
+      notify: Reiniciar Servidor Apache
+
+    - name: Incluir Directorio de VirtualHosts en Configuracion del Servidor
+      lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        line: IncludeOptional /etc/httpd/vhosts.d/*.conf
+
+    - name: Copia de "todo.war" hacia el Servidor
+      copy:
+        src: ./files/todo.war
+        dest: /opt/webapp/todo.war
+
+    - name: Copia de Dockerfile hacia el Servidor
+      copy:
+        src: ./files/Dockerfile
+        dest: /opt/webapp/Dockerfile
+
+    - name: Build de la Aplicacion Web usando Podman
+      command: podman build -t tomcat-todo:1 .
+
+    - name: Despliegue de la Aplicacion Web usando Podman
+      command: podman run -p 8080:8080 --name todo tomcat-todo:1
+
+    - name: Reiniciar Servidor Apache
+      service:
+        name: httpd
+        state: reloaded
