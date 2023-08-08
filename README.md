@@ -57,4 +57,5 @@ Una vez que comienza, se muestran en pantalla los pasos mencionados anteriorment
 Estos Playbooks fueron ejecutados y probados en las siguientes distribuciones:
 * RedHat/CentOS
 * Ubuntu
+
 Utiliza a tu riesgo si no ves tu distribución incluida aquí.
