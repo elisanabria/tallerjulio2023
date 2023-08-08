@@ -57,7 +57,14 @@
       line: bind-address = 0.0.0.0
     notify: Reiniciar servicio MariaDB
 
-  - name: Publicacion de puerto del Servicio
+  - name: Publicacion de puerto del Servicio - RedHat/Rocky
+    firewalld:
+     port: 3306/tcp
+     permanent: true
+     state: enabled
+    when: pkg_mgr == "yum"
+
+  - name: Publicacion de puerto del Servicio - Ubuntu
     ufw:
      rule: allow
      port: '3306'
