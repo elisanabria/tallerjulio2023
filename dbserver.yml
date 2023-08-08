@@ -7,7 +7,28 @@
 
   tasks:
 
-  - name: Mariadb server install
+  - name: Determinar Distribucion - RedHat/Rocky
+      set_fact:
+        pkg_mgr: "yum"
+      when: ansible_distribution == "RedHat" or ansible_distribution == "Rocky"
+
+  - name: Determinar Distribucion - Ubuntu
+      set_fact:
+        pkg_mgr: "apt"
+      when: ansible_distribution == "Ubuntu"
+
+  - name: Instalacion Server MariaDB - RedHat/Rocky
+    yum:
+      name: "{{ item }}"
+      state: present
+      update_cache: yes
+    loop:
+      - mariadb-server
+      - mariadb-client
+      - python3-pip
+    when: pkg_mgr == "yum"
+
+  - name: Instalacion Server MariaDB - Ubuntu
     apt:
       name: "{{ item }}"
       state: present
@@ -16,34 +37,35 @@
       - mariadb-server
       - mariadb-client
       - python3-pip
+    when: pkg_mgr == "apt"
 
-  - name: Install PyMySQL with pip
+  - name: Instalacion de PyMySQL con pip
     pip:
       name: PyMySQL
       executable: pip3
       extra_args: --user
 
-  - name: Mariadb service enable and start
+  - name: Habilitacion e inicio de Servicio
     service:
       name: mariadb
       state: started
       enabled: yes
 
-  - name: Configure mariadb to listen on all interfaces
+  - name: Configurar Servidor para que escuche en todas las interfaces
     lineinfile:
       path: /etc/mysql/mariadb.conf.d/50-server.cnf
       regexp: '^bind-address'
       line: bind-address = 0.0.0.0
     notify: Restart mariadb server
 
-  - name: Open mariadb ports
+  - name: Publicacion de puerto del Servicio
     ufw:
      rule: allow
      port: '3306'
      proto: tcp
 
 #MySQL Secure Installation
-  - name: Update MariaDB root password
+  - name: Actualizacion de root password de MariaDB
     mysql_user:
       login_unix_socket: /var/run/mysqld/mysqld.sock
       login_user: root
@@ -55,9 +77,9 @@
     loop:
       - 127.0.0.1
       - localhost
-      - 192.168.56.%
+      - 172.17.0.%
 
-  - name: Delete anonymous user
+  - name: Borrado de login anonimo
     mysql_user:
       login_host: localhost
       login_user: root
@@ -66,7 +88,7 @@
       host_all: yes
       state: absent
 
-  - name: Delete test database
+  - name: Borrado de Base de Datos test
     mysql_db:
       login_host: localhost
       login_user: root
@@ -75,8 +97,8 @@
       state: absent
 
   handlers:
-
-  - name: Restart mariadb server
+  
+  - name: Reiniciar servicio MariaDB
     service:
       name: mariadb
       state: restarted
