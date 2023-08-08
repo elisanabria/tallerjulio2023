@@ -47,19 +47,20 @@
     - name: Copia de "todo.war" hacia el Servidor
       copy:
         src: ./files/todo.war
-        dest: /opt/webapp/todo.war
+        dest: /opt/tomcat/webapps/todo.war
 
     - name: Copia de Dockerfile hacia el Servidor
       copy:
         src: ./files/Dockerfile
-        dest: /opt/webapp/Dockerfile
+        dest: /opt/tomcat/webapps/Dockerfile
 
     - name: Build de la Aplicacion Web usando Podman
-      command: podman build -t tomcat-todo:1 .
+      command: chdir=/opt/tomcat/webapps podman build -t tomcat-todo:1 .
 
     - name: Despliegue de la Aplicacion Web usando Podman
-      command: podman run -p 8080:8080 --name todo tomcat-todo:1
+      command: chdir=/opt/tomcat/webapps podman run -d -p 8080:8080 --name todo tomcat-todo:1
 
+  handlers:
     - name: Reiniciar Servidor Apache
       service:
         name: httpd
