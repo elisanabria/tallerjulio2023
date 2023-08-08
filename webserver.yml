@@ -41,8 +41,12 @@
 
     - name: Incluir Directorio de VirtualHosts en Configuracion del Servidor
       lineinfile:
-        path: /etc/httpd/conf/httpd.conf
-        line: IncludeOptional /etc/httpd/vhosts.d/*.conf
+        dest: /etc/httpd/conf/httpd.conf
+        line: '{{ item }}'
+      with_items:
+      - 'IncludeOptional /etc/httpd/vhosts.d/*.conf'
+      - 'LoadModule proxy_module modules/mod_proxy.so'
+      - 'LoadModule proxy_http_module modules/mod_proxy_http.so'
 
     - name: Copia de "todo.war" hacia el Servidor
       copy:
@@ -58,7 +62,13 @@
       command: chdir=/opt/tomcat/webapps podman build -t tomcat-todo:1 .
 
     - name: Despliegue de la Aplicacion Web usando Podman
-      command: chdir=/opt/tomcat/webapps podman run -d -p 8080:8080 --name todo tomcat-todo:1
+      command: chdir=/opt/tomcat/webapps podman run -d -p 8008:8080 --name todo tomcat-todo:1
+
+    - name: Habilitacion de servicio a traves de Firewall
+      firewalld:
+        service: http
+        permanent: true
+        state: enabled
 
   handlers:
     - name: Reiniciar Servidor Apache
