@@ -5,27 +5,72 @@
   remote_user: ansible
   become: yes
   tasks:
-    - name: Instalacion de Podman
-      yum:
+    - name: Install Podman and Apache Web Server
+  hosts: redhat, ubuntu
+  remote_user: ansible
+  become: yes
+  tasks:
+    - name: Determinar Distribucion - RedHat/Rocky
+      set_fact:
+        pkg_mgr: "yum"
+      when: ansible_distribution == "RedHat" or ansible_distribution == "Rocky"
+
+    - name: Determinar Distribucion - Ubuntu
+      set_fact:
+        pkg_mgr: "apt"
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Instalacion de Podman - RedHat/Rocky
+      package:
         name: podman
         state: present
+      when: pkg_mgr == "yum"
 
-    - name: Instalacion Servidor Web Apache
-      yum:
+    - name: Instalacion de Podman - Ubuntu
+      package:
+        name: podman
+        state: present
+      when: pkg_mgr == "apt"
+
+    - name: Instalacion Apache Web Server - RedHat/Rocky
+      package:
         name: httpd
         state: present
+      when: pkg_mgr == "yum"
 
-    - name: Iniciar y habilitar Servicio Apache
+    - name: Instalacion Apache Web Server - Ubuntu
+      package:
+        name: apache2
+        state: present
+      when: pkg_mgr == "apt"
+
+    - name: Iniciar y habilitar Servicio Apache - RedHat/Rocky
       service:
         name: httpd
         state: started
         enabled: true
+      when: pkg_mgr == "yum"
 
-    - name: Creacion de Directorio de VirtualHosts
+    - name: Iniciar y habilitar Servicio Apache - Ubuntu
+      service:
+        name: apache2
+        state: started
+        enabled: true
+      when: pkg_mgr == "apt"
+
+    - name: Creacion de Directorio de VirtualHosts - RedHat/Rocky
       file:
         path: /etc/httpd/vhosts.d
         state: directory
         owner: root
+      when: pkg_mgr == "yum"
+
+    - name: Creacion de Directorio de VirtualHosts - Ubuntu
+      file:
+        path: /etc/apache2/sites-available
+        state: directory
+        owner: root
+      when: pkg_mgr == "apt"
 
     - name: Creacion de Directorio de Webapp
       file:
@@ -33,13 +78,21 @@
         state: directory
         owner: root
 
-    - name: Copia de Archivo de Configuracion de Proxy Reverso
+    - name: Copia de Archivo de Configuracion de Proxy Reverso - RedHat/Rocky
       copy:
         src: ./files/apache_config.conf
         dest: /etc/httpd/vhosts.d/apache_config.conf
-      notify: Reiniciar Servidor Apache
+      when: pkg_mgr == "yum"
+      notify: Reiniciar Servidor Apache - RedHat/Rocky
 
-    - name: Incluir Directorio de VirtualHosts en Configuracion del Servidor
+    - name: Copia de Archivo de Configuracion de Proxy Reverso - Ubuntu
+      copy:
+        src: ./files/apache_config.conf
+        dest: /etc/apache2/vhosts.d/apache_config.conf
+      when: pkg_mgr == "apt"
+      notify: Reiniciar Servidor Apache - Ubuntu
+
+    - name: Incluir Directorio de VirtualHosts en Configuracion del Servidor - RedHat/Rocky
       lineinfile:
         dest: /etc/httpd/conf/httpd.conf
         line: '{{ item }}'
@@ -47,6 +100,17 @@
       - 'IncludeOptional /etc/httpd/vhosts.d/*.conf'
       - 'LoadModule proxy_module modules/mod_proxy.so'
       - 'LoadModule proxy_http_module modules/mod_proxy_http.so'
+      when: pkg_mgr == "yum"
+
+    - name: Incluir Directorio de VirtualHosts en Configuracion del Servidor - Ubuntu
+      lineinfile:
+        dest: /etc/apache2/apache2.conf
+        line: '{{ item }}'
+      with_items:
+      - 'IncludeOptional /etc/apache2/vhosts.d/*.conf'
+      - 'LoadModule proxy_module modules/mod_proxy.so'
+      - 'LoadModule proxy_http_module modules/mod_proxy_http.so'
+      when: pkg_mgr == "apt"
 
     - name: Copia de "todo.war" hacia el Servidor
       copy:
@@ -64,14 +128,29 @@
     - name: Despliegue de la Aplicacion Web usando Podman
       command: chdir=/opt/tomcat/webapps podman run -d -p 8008:8080 --name todo tomcat-todo:1
 
-    - name: Habilitacion de servicio a traves de Firewall
+    - name: Habilitacion de servicio a traves de Firewall - RedHat/Rocky
       firewalld:
         service: http
         permanent: true
         state: enabled
+      when: pkg_mgr == "yum"
 
-  handlers:
-    - name: Reiniciar Servidor Apache
+    - name: Habilitacion de servicio a traves de Firewall - Ubuntu
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+      when: pkg_mgr == "apt"
+
+handlers:
+    - name: Reiniciar Servidor Apache - RedHat/Rocky
       service:
         name: httpd
         state: reloaded
+      when: pkg_mgr == "yum"
+
+    - name: Reiniciar Servidor Apache - Ubuntu
+      service:
+        name: apache2
+        state: restarted
+      when: pkg_mgr == "apt"
