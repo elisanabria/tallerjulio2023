@@ -8,20 +8,19 @@
   tasks:
 
   - name: Determinar Distribucion - RedHat/Rocky
-      set_fact:
-        pkg_mgr: "yum"
-      when: ansible_distribution == "RedHat" or ansible_distribution == "Rocky"
+    set_fact:
+      pkg_mgr: "yum"
+    when: ansible_distribution == "RedHat" or ansible_distribution == "Rocky"
 
   - name: Determinar Distribucion - Ubuntu
-      set_fact:
-        pkg_mgr: "apt"
-      when: ansible_distribution == "Ubuntu"
+    set_fact:
+      pkg_mgr: "apt"
+    when: ansible_distribution == "Ubuntu"
 
   - name: Instalacion Server MariaDB - RedHat/Rocky
     yum:
       name: "{{ item }}"
       state: present
-      update_cache: yes
     loop:
       - mariadb-server
       - mariadb-client
@@ -56,13 +55,15 @@
       path: /etc/mysql/mariadb.conf.d/50-server.cnf
       regexp: '^bind-address'
       line: bind-address = 0.0.0.0
-    notify: Restart mariadb server
+    notify: Reiniciar servicio MariaDB
 
   - name: Publicacion de puerto del Servicio
     ufw:
      rule: allow
      port: '3306'
      proto: tcp
+    when: pkg_mgr == "apt"
+
 
 #MySQL Secure Installation
   - name: Actualizacion de root password de MariaDB

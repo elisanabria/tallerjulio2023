@@ -1,7 +1,7 @@
 ---
 # Archivo de Tareas de Despliegue de Servidor web
 
-- hosts: redhat
+- hosts: linux
   remote_user: ansible
   become: yes
   tasks:
@@ -142,7 +142,7 @@
         proto: tcp
       when: pkg_mgr == "apt"
 
-handlers:
+  handlers:
     - name: Reiniciar Servidor Apache - RedHat/Rocky
       service:
         name: httpd
